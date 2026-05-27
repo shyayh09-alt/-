@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>予約システム管理画面</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 850px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-top: 0; }
+        h3 { color: #475569; font-size: 16px; margin-top: 25px; margin-bottom: 10px; border-left: 4px solid #2563eb; padding-left: 8px; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; color: #4a5568; }
+        input[type="date"], input[type="text"] { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        .admin-box { background: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .flex-row { display: flex; gap: 10px; align-items: flex-end; }
+        .flex-item { flex: 1; }
+        .btn-add { background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .list-box { list-style: none; padding: 0; max-height: 150px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; background: #fafafa; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px 15px; border-bottom: 1px solid #e2e8f0; }
+        .res-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        .res-table th, .res-table td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; }
+        .res-table th { background: #f1f5f9; }
+        .btn-delete { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .sync-text { text-align: right; font-size: 12px; color: #059669; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>⚙️ 予約管理画面（Googleシート連動版）</h2>
+    <div id="sync-status" class="sync-text">スプレッドシート同期完了</div>
+    
+    <div class="admin-box">
+        <h3>📅 受付日の一括登録</h3>
+        <div class="flex-row">
+            <div class="flex-item">
+                <input type="date" id="start-date">
+            </div>
+            <div>～</div>
+            <div class="flex-item">
+                <input type="date" id="end-date">
+            </div>
+            <button class="btn-add" onclick="addDateRange()" style="background:#059669;">一括登録</button>
+        </div>
+    </div>
+
+    <div class="admin-box" style="background: #fdf2f8; border: 1px solid #fbcfe8;">
+        <h3>⏰ 提供時間帯の設定</h3>
+        <div class="flex-row">
+            <div class="flex-item">
+                <input type="text" id="new-time" placeholder="09:30～11:00">
+            </div>
+            <button class="btn-add" onclick="addTimeSlot()" style="background: #db2777;">追加</button>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 20px;">
+        <div style="flex: 1;">
+            <h3>📌 受付日一覧</h3>
+            <ul id="active-date-list" class="list-box"></ul>
+        </div>
+        <div style="flex: 1;">
+            <h3>⏱️ 時間帯一覧</h3>
+            <ul id="active-time-list" class="list-box"></ul>
+        </div>
+    </div>
+
+    <h3>📝 スプレッドシート内の予約一覧 <button onclick="loadData()" style="font-size:12px; padding:4px 8px; cursor:pointer;">🔄データを最新にする</button></h3>
+    <div style="overflow-x: auto;">
+        <table class="res-table">
+            <thead>
+                <tr><th>日付</th><th>クラス</th><th>時間帯</th><th>お名前</th><th>昼食</th><th>操作</th></tr>
+            </thead>
+            <tbody id="reservation-list-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // ⚠️ 下の "" の間に、あなたのGoogle URLを貼り付けてください
+    const APP_URL = "https://script.google.com/macros/s/AKfycbynOpCMUSdmgn-BFBS-bMh42nTeKqhhptkXTKRMpeJoj2i1gRqMzZ36KH6jmZBV5gIH/exec";
+
+    let serverData = { dates: [], times: [], reservations: [] };
+
+    async function loadData() {
+        showStatus("同期中...");
+        try {
+            const res = await fetch(APP_URL);
+            serverData = await res.json();
+            if(!serverData.times || serverData.times.length === 0) {
+                serverData.times = ["09:30～11:00", "11:30～12:30", "16:00～17:00"];
+            }
+            renderAll();
+            showStatus("スプレッドシート同期完了");
+        } catch(e) { showStatus("同期エラー", true); }
+    }
+
+    async function saveSettings() {
+        showStatus("設定を保存中...");
+        try {
+            await fetch(APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'updateSettings',
+                    dates: serverData.dates,
+                    times: serverData.times
+                })
+            });
+            showStatus("スプレッドシート同期完了");
+            renderAll();
+        } catch(e) { showStatus("保存エラー", true); }
+    }
+
+    function showStatus(text, isError=false) {
+        const el = document.getElementById('sync-status');
+        el.innerText = text;
+        el.style.color = isError ? '#ef4444' : '#059669';
+    }
+
+    function renderAll() {
+        const dList = document.getElementById('active-date-list');
+        dList.innerHTML = (serverData.dates||[]).length===0 ? '<li>設定なし</li>':'';
+        (serverData.dates||[]).forEach(d => {
+            const li = document.createElement('li'); li.className='list-item';
+            li.innerHTML = `<span>${d}</span><button class="btn-delete" onclick="deleteDate('${d}')">削除</button>`;
+            dList.appendChild(li);
+        });
+
+        const tList = document.getElementById('active-time-list');
+        tList.innerHTML = (serverData.times||[]).length===0 ? '<li>設定なし</li>':'';
+        (serverData.times||[]).forEach(t => {
+            const li = document.createElement('li'); li.className='list-item';
+            li.innerHTML = `<span>${t}</span><button class="btn-delete" onclick="deleteTimeSlot('${t}')">削除</button>`;
+            tList.appendChild(li);
+        });
+
+        const tbody = document.getElementById('reservation-list-tbody');
+        tbody.innerHTML = (serverData.reservations||[]).length===0 ? '<tr><td colspan="6" style="text-align:center;">予約データはありません</td></tr>':'';
+        let resList = serverData.reservations || [];
+        resList.forEach(r => r.date = r.date.split('T')[0]);
+        resList.forEach((res, i) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${res.date}</td><td>${res.className}</td><td>${res.time}</td><td><b>${res.name}</b></td><td>${res.lunch}</td><td><button class="btn-delete" onclick="deleteRes(${i})">行を削除</button></td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function addDateRange() {
+        const start = document.getElementById('start-date').value;
+        const end = document.getElementById('end-date').value;
+        if(!start || !end) return alert('両方選択してください');
+        let curr = new Date(start); const endDate = new Date(end);
+        if(!serverData.dates) serverData.dates = [];
+        while(curr <= endDate) {
+            const s = curr.toISOString().split('T')[0];
+            if(!serverData.dates.includes(s)) serverData.dates.push(s);
+            curr.setDate(curr.getDate()+1);
+        }
+        serverData.dates.sort(); saveSettings();
+    }
+    function deleteDate(d) { if(confirm('削除しますか？')) { serverData.dates = serverData.dates.filter(x=>x!==d); saveSettings(); } }
+    
+    function addTimeSlot() {
+        const t = document.getElementById('new-time').value.trim();
+        if(!t) return;
+        if(!serverData.times) serverData.times = [];
+        serverData.times.push(t); saveSettings(); document.getElementById('new-time').value='';
+    }
+
+async function deleteRes(i) {
+    if(confirm('スプレッドシートからこの予約を削除しますか？')) {
+        showStatus("削除中...");
+        const target = serverData.reservations[i];
+        // 👇 日付データから余計な時差情報（T00:00...など）を強制的にカットするお守り
+        const cleanDate = target.date.split('T')[0]; 
+        try {
+            await fetch(APP_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'deleteReservation',
+                    date: cleanDate, // 綺麗にした日付を送信
+                    className: target.className,
+                    time: target.time,
+                    name: target.name
+                })
+            });
+            loadData();
+        } catch(e) { showStatus("削除エラー", true); }
+    }
+}
+   
+    loadData();
+</script>
+</body>
+</html>
