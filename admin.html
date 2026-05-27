@@ -19,6 +19,16 @@
 
     <div class="row">
         <div class="col-md-5">
+            <div class="card p-3 bg-light border-primary">
+                <h5 class="card-title fw-bold text-primary">👥 1時間帯あたりの定員数</h5>
+                <div class="input-group">
+                    <span class="input-group-text">予約上限数</span>
+                    <input type="number" id="maxCapacity" class="form-control text-center fw-bold" min="1" max="99" value="2">
+                    <span class="input-group-text">名 / 枠</span>
+                </div>
+                <small class="text-muted mt-1">※通常は「2」枠。変更して下の保存ボタンを押すと即反映されます。</small>
+            </div>
+
             <div class="card p-3">
                 <h5 class="card-title fw-bold">🌿 クラスの設定</h5>
                 <div class="input-group mb-3">
@@ -26,8 +36,7 @@
                     <span class="input-group-text">クラス</span>
                     <button class="btn btn-primary" onclick="addClass()">追加</button>
                 </div>
-                <div id="classList" class="d-flex flex-wrap gap-2 mb-2">
-                    </div>
+                <div id="classList" class="d-flex flex-wrap gap-2 mb-2"></div>
             </div>
 
             <div class="card p-3">
@@ -63,8 +72,7 @@
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody id="resTable">
-                            </tbody>
+                        <tbody id="resTable"></tbody>
                     </table>
                 </div>
             </div>
@@ -74,9 +82,9 @@
 
 <script>
     // ⚠️【最重要】あなたのGoogle GASのURLをここに貼り付けてください！
-    const APP_URL = "https://script.google.com/macros/s/AKfycbwcbFUGMD6b8cKV93oPhDuqJ43JK7AhCnfHzRL8P5a-m1G2KDS1CUptgzgtlTmVE5t_/exec";
+    const APP_URL = "https://script.google.com/macros/s/AKfycbzCPAiQR4l0nKoHvIkDS4-gwpRWNeN8v_WmnwiXK2I8OV1cM2Hr6_IzsP-WrF4me8Q1/exec";
 
-    let serverData = { dates: [], times: [], classes: [], reservations: [] };
+    let serverData = { dates: [], times: [], classes: [], maxCapacity: 2, reservations: [] };
 
     async function loadData() {
         showStatus("データを読み込み中...");
@@ -84,11 +92,7 @@
             const res = await fetch(APP_URL);
             serverData = await res.json();
             
-            // 初回用にクラスの初期値をセット
-            if (!serverData.classes || serverData.classes.length === 0) {
-                serverData.classes = ["カモミール", "メリッサ", "マジョラム"];
-            }
-            
+            document.getElementById('maxCapacity').value = serverData.maxCapacity || 2; // 上限数を画面に表示
             renderSettings();
             renderReservations();
             showStatus("");
@@ -96,7 +100,6 @@
     }
 
     function renderSettings() {
-        // 1. クラス一覧の描画
         const classDiv = document.getElementById('classList');
         classDiv.innerHTML = serverData.classes.length === 0 ? '<span class="text-muted small">登録なし</span>' : '';
         serverData.classes.forEach((c, idx) => {
@@ -107,14 +110,12 @@
                 </span>`;
         });
 
-        // 2. 日付一覧の描画
         const dateUl = document.getElementById('dateList');
         dateUl.innerHTML = serverData.dates.length === 0 ? '<li class="list-group-item text-muted text-center">日付が登録されていません</li>' : '';
         serverData.dates.sort().forEach((d, idx) => {
             dateUl.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${d}<button class="btn btn-sm btn-outline-danger" onclick="removeDate(${idx})">削除</button></li>`;
         });
 
-        // 3. 時間帯一覧の描画
         const timeUl = document.getElementById('timeList');
         timeUl.innerHTML = serverData.times.length === 0 ? '<li class="list-group-item text-muted text-center">時間帯が登録されていません</li>' : '';
         serverData.times.forEach((t, idx) => {
@@ -147,7 +148,6 @@
         });
     }
 
-    // クラスの追加・削除アクション
     function addClass() {
         const name = document.getElementById('newClass').value.trim();
         if(!name) return;
@@ -157,42 +157,26 @@
         renderSettings();
     }
     function removeClass(idx) {
-        if(confirm('このクラスを削除しますか？（保存ボタンを押すまで確定しません）')) {
-            serverData.classes.splice(idx, 1);
-            renderSettings();
-        }
+        if(confirm('このクラスを削除しますか？')) { serverData.classes.splice(idx, 1); renderSettings(); }
     }
-
-    // 日付の追加・削除アクション
     function addDate() {
         const val = document.getElementById('newDate').value;
-        if(!val) return;
-        if(serverData.dates.includes(val)) return;
-        serverData.dates.push(val);
-        renderSettings();
+        if(!val || serverData.dates.includes(val)) return;
+        serverData.dates.push(val); renderSettings();
     }
-    function removeDate(idx) {
-        serverData.dates.splice(idx, 1);
-        renderSettings();
-    }
-
-    // 時間の追加・削除アクション
+    function removeDate(idx) { serverData.dates.splice(idx, 1); renderSettings(); }
+    
     function addTime() {
         const val = document.getElementById('newTime').value.trim();
-        if(!val) return;
-        if(serverData.times.includes(val)) return;
-        serverData.times.push(val);
-        document.getElementById('newTime').value = "";
-        renderSettings();
+        if(!val || serverData.times.includes(val)) return;
+        serverData.times.push(val); document.getElementById('newTime').value = ""; renderSettings();
     }
-    function removeTime(idx) {
-        serverData.times.splice(idx, 1);
-        renderSettings();
-    }
+    function removeTime(idx) { serverData.times.splice(idx, 1); renderSettings(); }
 
     // 設定保存
     async function saveSettings() {
         showStatus("設定を保存中...");
+        const cap = parseInt(document.getElementById('maxCapacity').value, 10) || 2;
         try {
             await fetch(APP_URL, {
                 method: 'POST',
@@ -200,7 +184,8 @@
                     action: 'updateSettings',
                     dates: serverData.dates,
                     times: serverData.times,
-                    classes: serverData.classes // クラスデータも一緒に保存！
+                    classes: serverData.classes,
+                    maxCapacity: cap // 👈 上限数を一緒に送信！
                 })
             });
             alert('設定を保存しました！');
@@ -219,10 +204,7 @@
                     method: 'POST',
                     body: JSON.stringify({
                         action: 'deleteReservation',
-                        date: cleanDate,
-                        className: target.className,
-                        time: target.time,
-                        name: target.name
+                        date: cleanDate, className: target.className, time: target.time, name: target.name
                     })
                 });
                 loadData();
@@ -234,8 +216,7 @@
         const div = document.getElementById('status');
         if(!msg) { div.classList.add('d-none'); return; }
         div.className = `alert ${isError ? 'alert-danger' : 'alert-info'} text-center`;
-        div.textContent = msg;
-        div.classList.remove('d-none');
+        div.textContent = msg; div.classList.remove('d-none');
     }
 
     loadData();
