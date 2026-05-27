@@ -30,12 +30,8 @@
 
         <div class="mb-4">
             <label class="form-label fw-bold">2. クラスを選択してください</label>
-            <div class="d-flex gap-2">
-                <input type="radio" class="btn-check" name="className" id="classA" value="A" required checked>
-                <label class="btn btn-outline-primary w-50" for="classA">Aクラス</label>
-                <input type="radio" class="btn-check" name="className" id="classB" value="B">
-                <label class="btn btn-outline-primary w-50" for="classB">Bクラス</label>
-            </div>
+            <div id="classContainer" class="d-flex flex-wrap gap-2">
+                </div>
         </div>
 
         <div class="mb-4">
@@ -74,9 +70,9 @@
 
 <script>
     // ⚠️【最重要】あなたのGoogle GASのURLをここに貼り付けてください！
-    const APP_URL = "https://script.google.com/macros/s/AKfycbynOpCMUSdmgn-BFBS-bMh42nTeKqhhptkXTKRMpeJoj2i1gRqMzZ36KH6jmZBV5gIH/exec";
+    const APP_URL = "https://script.google.com/macros/s/AKfycbwcbFUGMD6b8cKV93oPhDuqJ43JK7AhCnfHzRL8P5a-m1G2KDS1CUptgzgtlTmVE5t_/exec";
 
-    let serverData = { dates: [], times: [], reservations: [] };
+    let serverData = { dates: [], times: [], classes: ["カモミール", "メリッサ", "マジョラム"], reservations: [] };
     let selectedTime = "";
 
     async function loadData() {
@@ -84,7 +80,14 @@
         try {
             const res = await fetch(APP_URL);
             serverData = await res.json();
+            
+            // もしGAS側にclassesデータが無ければ初期値をセット
+            if (!serverData.classes || serverData.classes.length === 0) {
+                serverData.classes = ["カモミール", "メリッサ", "マジョラム"];
+            }
+            
             initDates();
+            initClasses();
             showStatus("");
         } catch(e) { showStatus("データの読み込みに失敗しました", true); }
     }
@@ -100,15 +103,39 @@
         });
     }
 
+    function initClasses() {
+        const container = document.getElementById('classContainer');
+        container.innerHTML = "";
+        serverData.classes.forEach((c, idx) => {
+            const input = document.createElement('input');
+            input.type = 'radio';
+            input.className = 'btn-check';
+            input.name = 'className';
+            input.id = `class_${idx}`;
+            input.value = c;
+            if(idx === 0) input.checked = true;
+            input.onchange = updateSlots;
+
+            const label = document.createElement('label');
+            label.className = 'btn btn-outline-primary flex-fill';
+            label.htmlFor = `class_${idx}`;
+            label.textContent = c + "クラス";
+
+            container.appendChild(input);
+            container.appendChild(label);
+        });
+    }
+
     function updateSlots() {
         const date = document.getElementById('resDate').value;
-        const className = document.querySelector('input[name="className"]:checked').value;
+        const classRadio = document.querySelector('input[name="className"]:checked');
+        const className = classRadio ? classRadio.value : "";
         const container = document.getElementById('timeSlots');
         container.innerHTML = "";
         selectedTime = "";
         document.getElementById('submitBtn').disabled = true;
 
-        if(!date) return;
+        if(!date || !className) return;
 
         serverData.times.forEach(t => {
             const booked = serverData.reservations.filter(r => {
@@ -134,7 +161,6 @@
     }
 
     document.getElementById('resDate').onchange = updateSlots;
-    document.querySelectorAll('input[name="className"]').forEach(r => r.onchange = updateSlots);
 
     document.getElementById('resForm').onsubmit = async (e) => {
         e.preventDefault();
