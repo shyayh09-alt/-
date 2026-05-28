@@ -86,7 +86,7 @@
 
 <script>
     // ⚠️【最重要】Google GASのURLをここに貼り付けてください！
-    const APP_URL = "https://script.google.com/macros/s/AKfycbxMyvSVHm1WyC9hrUfIkXLIMBqMgVKWqXriEp7E7La40LL2Rhf4-K5uPPUHbZp66X9v/exec";
+    const APP_URL = "https://script.google.com/macros/s/AKfycbxzZFEE8vEuTJpr8L4w928ZpT_DyCZi0cYkJh1pJ1thU_CqyUGL4WOhYVY5z5yr0dDz/exec";
 
     let serverData = { dates: [], times: [], classes: [], maxCapacity: 2, reservations: [] };
 
@@ -104,7 +104,6 @@
         }
     }
 
-    // 💡 英語表記になってしまう日付を綺麗な形式（YYYY-MM-DD）に強制変換する関数
     function formatDateDisplay(dStr) {
         if (!dStr) return "";
         if (typeof dStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
@@ -136,13 +135,11 @@
         const dateUl = document.getElementById('dateList');
         dateUl.innerHTML = serverData.dates.length === 0 ? '<li class="list-group-item text-muted text-center">日付が登録されていません</li>' : '';
         
-        // 💡 管理画面に表示する日付も綺麗にフォーマットしてから並び替えます
         const cleanedDates = serverData.dates.map(d => formatDateDisplay(d)).filter(Boolean);
         const uniqueDates = [...new Set(cleanedDates)].sort();
 
         uniqueDates.forEach((d) => {
             const idx = serverData.dates.indexOf(d);
-            // serverData.datesに含まれる元の値を削除できるように、インデックスを再取得
             const originalIdx = serverData.dates.findIndex(orig => formatDateDisplay(orig) === d);
             dateUl.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${d}<button class="btn btn-sm btn-outline-danger" onclick="removeDate(${originalIdx !== -1 ? originalIdx : idx})">削除</button></li>`;
         });
@@ -158,7 +155,7 @@
         const tbody = document.getElementById('resTable');
         tbody.innerHTML = serverData.reservations.length === 0 ? '<tr><td colspan="3" class="text-muted text-center py-4">現在ご予約はありません</td></tr>' : '';
         serverData.reservations.forEach((r, i) => {
-            const cleanResDate = formatDateDisplay(r.date); // 💡 予約一覧の日付も綺麗にフォーマット
+            const cleanResDate = formatDateDisplay(r.date);
             tbody.innerHTML += `
                 <tr>
                     <td>
