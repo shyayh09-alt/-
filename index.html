@@ -54,7 +54,7 @@
             </div>
 
             <div class="mb-3 d-none" id="lunchWrapper">
-                <label class="form-label text-danger fw-bold">当当日の昼食</label>
+                <label class="form-label text-danger fw-bold">当日の昼食</label>
                 <select id="resLunch" class="form-select">
                     <option value="必要">必要</option>
                     <option value="不要" selected>不要</option>
@@ -87,7 +87,9 @@
     function initDates() {
         const select = document.getElementById('resDate');
         select.innerHTML = '<option value="">選択してください</option>';
-        serverData.dates.forEach(d => {
+        // 日付を昇順にソートして並べる
+        const sortedDates = [...serverData.dates].sort();
+        sortedDates.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d; opt.textContent = d; select.appendChild(opt);
         });
@@ -107,6 +109,7 @@
 
             container.appendChild(input); container.appendChild(label);
         });
+        updateSlots();
     }
 
     function updateSlots() {

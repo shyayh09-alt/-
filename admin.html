@@ -86,7 +86,7 @@
 
 <script>
     // ⚠️【最重要】新アカウントのGoogle GASのURLをここに貼り付けてください！
-    const APP_URL = "https://script.google.com/macros/s/AKfycbxXshaU3tAMkeAQMrQW7rEf5X6zOhUEmcryqfWGIz8iJuUqrieX7Kk-voKr_1NcvtC3/exec";
+    const APP_URL = "ここにあなたのGoogleのURLを入れる";
 
     let serverData = { dates: [], times: [], classes: [], maxCapacity: 2, reservations: [] };
 
@@ -115,7 +115,10 @@
 
         const dateUl = document.getElementById('dateList');
         dateUl.innerHTML = serverData.dates.length === 0 ? '<li class="list-group-item text-muted text-center">日付が登録されていません</li>' : '';
-        serverData.dates.sort().forEach((d, idx) => {
+        // 日付を綺麗に並び替えて表示
+        const sortedDates = [...serverData.dates].sort();
+        sortedDates.forEach((d) => {
+            const idx = serverData.dates.indexOf(d);
             dateUl.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center">${d}<button class="btn btn-sm btn-outline-danger" onclick="removeDate(${idx})">削除</button></li>`;
         });
 
@@ -170,7 +173,7 @@
             }
             d1.setDate(d1.getDate() + 1);
         }
-        alert(`${count}日分の日付を追加しました！下の「設定を保存する」を押すと確定します。`);
+        alert(`${count}日分の日付を追加しました！\n画面一番下の「設定を保存する」ボタンを押すとスプレッドシートに保存されます。`);
         renderSettings();
     }
 
@@ -193,14 +196,16 @@
         showStatus("設定を保存中...");
         const cap = parseInt(document.getElementById('maxCapacity').value, 10) || 2;
         try {
-            await fetch(APP_URL, {
+            // スプレッドシート（シート2）にデータを確実に送り込む設定
+            const response = await fetch(APP_URL, {
                 method: 'POST',
                 body: JSON.stringify({
                     action: 'updateSettings', dates: serverData.dates, times: serverData.times, classes: serverData.classes, maxCapacity: cap
                 })
             });
-            alert('設定を保存しました！'); loadData();
-        } catch(e) { showStatus("保存に失敗しました", true); }
+            alert('スプレッドシートへの設定保存が完了しました！');
+            loadData();
+        } catch(e) { showStatus("保存に失敗しました。URLや権限を再度ご確認ください。", true); }
     }
 
     async function deleteRes(i) {
