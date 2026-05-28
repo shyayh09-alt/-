@@ -68,7 +68,7 @@
 
 <script>
     // ⚠️【最重要】Google GASのURLをここに貼り付けてください！
-    const APP_URL = "https://script.google.com/macros/s/AKfycbxXshaU3tAMkeAQMrQW7rEf5X6zOhUEmcryqfWGIz8iJuUqrieX7Kk-voKr_1NcvtC3/exec";
+    const APP_URL = "https://script.google.com/macros/s/AKfycbwlZFWCniCf9KDHS3452bakpIcC7XpxipFZYI5cdszc2InUsvr4uVTXTLyqGy5yvL_B/exec";
 
     let serverData = { dates: [], times: [], classes: [], maxCapacity: 2, reservations: [] };
     let selectedTime = "";
@@ -84,14 +84,11 @@
         } catch(e) { showStatus("データの読み込みに失敗しました: " + e.message, true); }
     }
 
-    // 💡 英語の長い日付になってしまう問題をここで綺麗に「2026-06-12」の形に変換します
     function formatDateDisplay(dStr) {
         if (!dStr) return "";
-        // もしすでに「YYYY-MM-DD」の形ならそのまま返す
         if (typeof dStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
             return dStr;
         }
-        // 英語表記（Fri Jun 12 2026...）などを解析して変換
         try {
             const d = new Date(dStr);
             if (isNaN(d.getTime())) return String(dStr);
@@ -107,12 +104,8 @@
     function initDates() {
         const select = document.getElementById('resDate');
         select.innerHTML = '<option value="">選択してください</option>';
-        
-        // すべての日付を「YYYY-MM-DD」の形に綺麗に整えてから並び替えます
-        const cleanedDates = serverData.dates.map(d => formatDateDisplay(d)).filter(Boolean);
-        const uniqueDates = [...new Set(cleanedDates)].sort();
-
-        uniqueDates.forEach(d => {
+        const sortedDates = [...serverData.dates].sort();
+        sortedDates.forEach(d => {
             const opt = document.createElement('option');
             opt.value = d; opt.textContent = d; select.appendChild(opt);
         });
@@ -135,17 +128,6 @@
         updateSlots();
     }
 
-    function formatTimeDisplay(t) {
-        if (typeof t === 'string' && t.includes('T')) {
-            const timePart = t.split('T')[1];
-            if (timePart) {
-                const parts = timePart.split(':');
-                return parts[0] + ':' + parts[1];
-            }
-        }
-        return String(t);
-    }
-
     function updateSlots() {
         const date = document.getElementById('resDate').value;
         const classRadio = document.querySelector('input[name="className"]:checked');
@@ -159,31 +141,31 @@
         if(!date || !className) return;
 
         serverData.times.forEach(t => {
-            const displayTime = formatTimeDisplay(t);
-
             const booked = serverData.reservations.filter(r => {
-                const rDate = formatDateDisplay(r.date); // 💡 予約済みのデータ側も綺麗にそろえる
-                const rTime = formatTimeDisplay(r.time);
-                return rDate === date && r.className === className && rTime === displayTime;
+                const rDate = formatDateDisplay(r.date);
+                return rDate === date && r.className === className && r.time === t;
             }).length;
 
             const remains = Math.max(0, serverData.maxCapacity - booked);
             const div = document.createElement('div');
             div.className = `slot ${remains === 0 ? 'disabled' : ''}`;
-            div.innerHTML = `<strong>${displayTime}</strong> <span class="badge ${remains > 0 ? 'bg-success' : 'bg-danger'} float-end">残り ${remains} 枠</span>`;
+            div.innerHTML = `<strong>${t}</strong> <span class="badge ${remains > 0 ? 'bg-success' : 'bg-danger'} float-end">残り ${remains} 枠</span>`;
             
             if(remains > 0) {
                 div.onclick = () => {
                     document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
                     div.classList.add('selected');
-                    selectedTime = displayTime;
+                    selectedTime = t;
                     document.getElementById('submitBtn').disabled = false;
 
+                    // 💡 文字列の揺れ（全角・半角・後ろの文字など）に対応する判定ロジック
                     const lunchBox = document.getElementById('lunchWrapper');
-                    if(displayTime.includes("11:30")) {
-                        lunchBox.classList.remove('d-none');
+                    const cleanTime = t.replace(/[：]/g, ':'); // 全角のコロンを半角に統一
+                    
+                    if(cleanTime.includes("11:30") || cleanTime.includes("１１：３０")) {
+                        lunchBox.classList.remove('d-none'); // 昼食欄を表示
                     } else {
-                        lunchBox.classList.add('d-none');
+                        lunchBox.classList.add('d-none');    // それ以外は非表示
                         document.getElementById('resLunch').value = "不要";
                     }
                 };
@@ -214,22 +196,3 @@
 
         try {
             await fetch(APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(resData) });
-            alert('ご予約ありがとうございました！メールをご確認ください。');
-            location.reload();
-        } catch(e) {
-            showStatus("通信エラーが発生しました: " + e.message, true);
-            btn.disabled = false;
-        }
-    };
-
-    function showStatus(msg, isError = false) {
-        const div = document.getElementById('status');
-        if(!msg) { div.classList.add('d-none'); return; }
-        div.className = `alert ${isError ? 'alert-danger' : 'alert-info'} text-center`;
-        div.textContent = msg; div.classList.remove('d-none');
-    }
-
-    loadData();
-</script>
-</body>
-</html>
