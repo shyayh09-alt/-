@@ -85,8 +85,8 @@
 </div>
 
 <script>
-    // ⚠️【最重要】あなたのGoogle GASのURL（最後が /exec のもの）をここに貼り付けてください！
-    const APP_URL = "https://script.google.com/macros/s/AKfycbzU7PVLVbXdBqgAwVeoekuMgXTH_Hw7yElxS43KRvzOeyRROr4PomjcGV-Gd7y1E6AD/exec";
+    // ⚠️【最重要】新アカウントのGoogle GASのURLをここに貼り付けてください！
+    const APP_URL = "https://script.google.com/macros/s/AKfycby219ozzIF39BkoUwyUeehYNSTUfd4732GEJQRhW3OQYiCV0_JQ28aQyWdqxSqN8HLR/exec";
 
     let serverData = { dates: [], times: [], classes: [], maxCapacity: 2, reservations: [] };
 
@@ -148,7 +148,6 @@
         });
     }
 
-    // 💡 期間指定（何日〜何日）でまとめて日付を生成する新機能
     function addDateRange() {
         const startVal = document.getElementById('startDate').value;
         const endVal = document.getElementById('endDate').value;
@@ -169,9 +168,9 @@
                 serverData.dates.push(dateStr);
                 count++;
             }
-            d1.setDate(d1.getDate() + 1); // 1日進める
+            d1.setDate(d1.getDate() + 1);
         }
-        alert(`${count}日分の日付を追加しました！（下の「設定を保存する」を押すと確定します）`);
+        alert(`${count}日分の日付を追加しました！下の「設定を保存する」を押すと確定します。`);
         renderSettings();
     }
 

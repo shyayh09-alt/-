@@ -54,7 +54,7 @@
             </div>
 
             <div class="mb-3 d-none" id="lunchWrapper">
-                <label class="form-label text-danger fw-bold">当日の昼食</label>
+                <label class="form-label text-danger fw-bold">当当日の昼食</label>
                 <select id="resLunch" class="form-select">
                     <option value="必要">必要</option>
                     <option value="不要" selected>不要</option>
@@ -67,8 +67,8 @@
 </div>
 
 <script>
-    // ⚠️【最重要】先ほどステップ1の「4」でコピーした、最新のGoogleのURL（最後が /exec ）をここに貼り付けてください！
-    const APP_URL = "https://script.google.com/macros/s/AKfycbzU7PVLVbXdBqgAwVeoekuMgXTH_Hw7yElxS43KRvzOeyRROr4PomjcGV-Gd7y1E6AD/exec";
+    // ⚠️【最重要】新アカウントのGoogle GASのURLをここに貼り付けてください！
+    const APP_URL = "https://script.google.com/macros/s/AKfycby219ozzIF39BkoUwyUeehYNSTUfd4732GEJQRhW3OQYiCV0_JQ28aQyWdqxSqN8HLR/exec";
 
     let serverData = { dates: [], times: [], classes: [], maxCapacity: 2, reservations: [] };
     let selectedTime = "";
@@ -173,7 +173,6 @@
         };
 
         try {
-            // 💡 mode: 'no-cors' にしてGitHubとGoogle間の通信を最も安定する形に固定します
             await fetch(APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(resData) });
             alert('ご予約ありがとうございました！メールをご確認ください。');
             location.reload();
